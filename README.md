@@ -18,21 +18,21 @@ Installation
 Clonez ou téléchargez ce répertoire sur votre machine.
 bash
 
-Réduire
+
 
 Envelopper
 
-Copier
-git clone <URL-du-dépôt>
-Naviguez dans le répertoire du projet.
+
+git clone (https://github.com/intissarbahrouni/projet-scraping-immobilier.git)
+D:\projet-scraping-immobilier.
 bash
 
 Réduire
 
 Envelopper
 
-Copier
-cd PROJET-SCRAPING-IMMOBILIER
+
+cd D:\projet-scraping-immobilier
 Créez et activez un environnement virtuel (si venv/ n'existe pas déjà).
 bash
 
@@ -40,14 +40,14 @@ Réduire
 
 Envelopper
 
-Copier
+
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 .\venv\Scripts\activate   # Windows
 Installez les dépendances listées dans requirements.txt.
 bash
 
-Réduire
+
 
 Envelopper
 
@@ -111,25 +111,3 @@ beautifulsoup4 : Pour parser le HTML.
 fastapi : Pour créer l'API REST.
 uvicorn : Serveur ASGI pour exécuter l'API.
 requests : (Si utilisé pour des requêtes HTTP supplémentaires).
-Limites
-Le scraping est spécifique à la structure HTML de tunisie-annonce.com. Toute modification du site peut casser le script.
-Le chemin du driver Edge (msedgedriver.exe) est fixe dans scraper.py et doit être adapté selon votre système.
-Certains champs comme superficie et contact ne sont pas extraits.
-Améliorations possibles
-Ajouter une base de données (ex. : SQLite) pour remplacer data.json.
-Extraire des champs supplémentaires (ex. : superficie) en explorant les pages de détail des annonces.
-Implémenter des proxies ou un mode headless pour plus de discrétion lors du scraping.
-Ajouter des filtres à l'API (ex. : GET /annonces?region=Tunis).
-Avertissement
-Ce projet est à des fins éducatives. Assurez-vous de respecter les conditions d'utilisation de tunisie-annonce.com et les lois locales sur le web scraping.
-L'utilisation excessive peut entraîner un blocage par le site cible.
-Auteur
-[Votre nom]
-
-Pour toute question, contactez [votre email ou autre moyen de contact].
-
-Instructions pour l’utilisation
-Créez un fichier nommé README.md à la racine de votre répertoire PROJET-SCRAPING-IMMOBILIER.
-Copiez-collez le contenu ci-dessus dans ce fichier.
-Remplacez [Votre nom] et [votre email ou autre moyen de contact] par vos informations personnelles.
-Si vous avez un dépôt Git (ex. : sur GitHub), remplacez <URL-du-dépôt> par l’URL réelle de votre dépôt. Sinon, vous pouvez supprimer la commande git clone
