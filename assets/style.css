@@ -1,0 +1,52 @@
+.dashboard-title {
+    background-color: #ccccff !important;
+    text-align: center !important;
+    padding: 11px !important;
+    width: 99% !important;
+    margin: 0 !important;
+}
+/* Changer la couleur du curseur du RangeSlider */
+.dash-slider .rc-slider-handle {
+    background-color: #6050dc !important;
+    border-color: #6050dc !important;
+}
+
+/* Changer la couleur de la piste du RangeSlider pour qu'elle corresponde au thème */
+.dash-slider .rc-slider-track {
+    background-color: #6b64f3 !important;
+}
+
+/* Réduire la hauteur du DatePickerRange et changer la couleur du calendrier */
+.DateInput_input {
+    height: 30px !important; /* Réduire la hauteur des champs de saisie */
+    font-size: 14px !important;
+    padding: 5px !important;
+    position: relative !important;
+    left:70px
+}
+
+.CalendarDay__selected, .CalendarDay__selected:hover {
+    background: #6b64f3 !important; /* Couleur des jours sélectionnés */
+    border-color: #6b64f3 !important;
+}
+
+.CalendarDay__hovered_span, .CalendarDay__hovered_span:hover {
+    background: #ccccff !important; /* Couleur des jours survolés dans la plage */
+}
+
+.DateRangePickerInput__withBorder {
+    border-color: #6b64f3 !important; /* Bordure du DatePicker */
+}
+
+.DateRangePicker_picker {
+    background-color: #ffffff !important; /* Fond du calendrier */
+}
+
+.CalendarMonth_caption {
+    color: #6b64f3 !important; /* Couleur du mois dans le calendrier */
+}
+
+.DayPickerNavigation_button__default {
+    background-color: #6b64f3 !important; /* Boutons de navigation du calendrier */
+    color: white !important;
+}
