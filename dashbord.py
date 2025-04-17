@@ -5,8 +5,11 @@ from dash import html, dcc, dash_table
 import plotly.graph_objs as go
 import pandas as pd
 from sqlalchemy import create_engine, text
+import dash_leaflet as dl
+from geopy.geocoders import Nominatim
 import plotly.express as px
-
+import time
+import os
 # URL de connexion à Supabase
 DATABASE_URL = "postgresql://postgres.lpdyhnlgdpnheclcpzzg:B5BEKdICOZVYMp2m@aws-0-eu-central-1.pooler.supabase.com:6543/postgres"
 
@@ -83,6 +86,89 @@ def get_distribution_data():
         prix_min_max_data = pd.read_sql(prix_min_max_query, connection)
 
         return type_data, loc_data, prix_loc_data, annonces_data, prix_min_max_data
+
+
+# Chargement ou création du cache
+cache_file = "geocache.csv"
+if os.path.exists(cache_file):
+    cache_df = pd.read_csv(cache_file)
+else:
+    cache_df = pd.DataFrame(columns=["localisation", "lat", "lon"])
+
+# Lire les localisations des annonces
+with engine.connect() as conn:
+    df = pd.read_sql("SELECT DISTINCT localisation ,titre FROM annonces", conn)
+
+# Initialiser le géocodeur
+#C’est un service de géocodage gratuit fourni par OpenStreetMap. 
+# Il permet de convertir des adresses (ou noms de lieux) 
+# en coordonnées GPS (latitude et longitude)
+geolocator = Nominatim(user_agent="dash_leaflet_app", timeout=5)
+locations = []
+
+# Fonction d'ajout au cache
+def ajouter_au_cache(loc_name, lat, lon):
+    global cache_df
+    nouveau = pd.DataFrame([{
+        "localisation": loc_name,
+        "lat": lat,
+        "lon": lon
+    }])
+    cache_df = pd.concat([cache_df, nouveau], ignore_index=True)
+    cache_df.to_csv(cache_file, index=False)
+
+# Géocoder les localisations
+for index, row in df.iterrows():
+    loc_name = row["localisation"]
+
+    if not isinstance(loc_name, str) or not loc_name.strip():
+        continue  # Ignorer les valeurs vides
+
+    # Vérifier si déjà dans le cache
+    if loc_name in cache_df["localisation"].values:
+        cached = cache_df[cache_df["localisation"] == loc_name].iloc[0]
+        lat, lon = cached["lat"], cached["lon"]
+        locations.append({
+            "titre": row["titre"],
+            "localisation": loc_name,
+            "lat": lat,
+            "lon": lon
+        })
+    else:
+        try:
+            loc = geolocator.geocode(loc_name)
+            if loc:
+                lat, lon = loc.latitude, loc.longitude
+                print(f"[✔] {loc_name} -> ({lat}, {lon})")
+
+                locations.append({
+                    "titre": row["titre"],
+                    "localisation": loc_name,
+                    "lat": lat,
+                    "lon": lon
+                })
+
+                ajouter_au_cache(loc_name, lat, lon)
+
+            else:
+                print(f"[✘] Localisation introuvable : {loc_name}")
+
+            time.sleep(1)  # Limite pour ne pas surcharger Nominatim
+
+        except Exception as e:
+            print(f"Erreur de géocodage pour {loc_name} : {e}")
+
+print(f"\n➡️ {len(cache_df)} localisations dans le cache.")
+print(f"➡️ {len(locations)} localisations utilisées pour les marqueurs.\n")
+
+# Créer des marqueurs Leaflet
+markers = [
+    dl.Marker(
+        position=(loc["lat"], loc["lon"]),
+        children=dl.Popup([html.B(loc["titre"]), html.Br(), loc["localisation"]])
+    )
+    for loc in locations
+]
 
 # Récupérer les données
 kpis = get_kpis()
@@ -169,6 +255,40 @@ fig_prix_loc.update_layout(
     yaxis_tickformat=",.0f"
 )
 
+# Convertir la colonne 'date_publication' en datetime si ce n'est pas déjà fait
+annonces_data['date_publication'] = pd.to_datetime(annonces_data['date_publication'])
+
+# Regrouper par mois (ou par semaine si vous préférez)
+# Pour un regroupement par mois :
+annonces_par_mois = annonces_data.groupby(annonces_data['date_publication'].dt.to_period('M')).size().reset_index(name='nombre_annonces')
+annonces_par_mois['date_publication'] = annonces_par_mois['date_publication'].dt.to_timestamp()
+
+# Créer le graphique avec Plotly
+fig_evolution_temporelle = px.line(
+    annonces_par_mois,
+    x='date_publication',
+    y='nombre_annonces',
+    title="Évolution du nombre d'annonces dans le temps",
+    labels={'date_publication': 'Date de publication', 'nombre_annonces': 'Nombre d’annonces'},
+    template='plotly_white'
+)
+
+# Personnaliser le graphique
+fig_evolution_temporelle.update_layout(
+    xaxis_title="Date (par mois)",
+    yaxis_title="Nombre d'annonces",
+    font=dict(size=14),
+    title_x=0.5,  # Centrer le titre
+    plot_bgcolor='#f9f9f9',
+    paper_bgcolor='#f9f9f9',
+    margin=dict(l=40, r=40, t=60, b=40)
+)
+
+fig_evolution_temporelle.update_traces(
+    line_color='#6b64f3',  # Couleur de la courbe correspondant à votre thème
+    line_width=2
+)
+
 # Initialisation de l'application Dash
 app = dash.Dash(
     __name__,
@@ -178,6 +298,17 @@ app = dash.Dash(
     suppress_callback_exceptions=True  # Allow callbacks for components that might not exist initially
 )
 
+# Création de la carte centrée sur la Tunisie
+tunisia_center = [34.0, 9.0]
+tunisia_zoom = 6
+
+# Création des marqueurs
+markers = [
+    dl.Marker(
+        position=(loc["lat"], loc["lon"]),
+        children=dl.Popup(f"{loc['titre']} - {loc['localisation']}")
+    ) for loc in locations
+]
 # Styles
 kpi_style = {
     "border": "2px solid #6b64f3",
@@ -408,6 +539,39 @@ page_1_layout = html.Div([
     html.H2("Répartition des prix par localisation"),
     dcc.Graph(figure=fig_prix_loc, style={"width": "100%", "margin": "20px 0"}),
     
+  html.Div([
+    # Conteneur de gauche : Graphique
+    html.Div([
+        html.H2("Évolution temporelle des annonces"),
+        dcc.Graph(
+            figure=fig_evolution_temporelle,
+            style={"width": "100%", "height": "70vh", "margin": "20px 0"}
+        )
+    ], style={"flex": "1", "padding": "10px"}),
+
+    # Conteneur de droite : Carte
+    html.Div([
+        html.H2("Carte des Annonces immobilières en Tunisie 📍"),
+        dl.Map(
+            center=[34.0, 9.0],
+            zoom=6,
+            style={"width": "100%", "height": "70vh"},
+            children=[
+                dl.TileLayer(),
+                dl.LayerGroup(markers)
+            ]
+        )
+    ], style={"flex": "1", "padding": "10px"}),
+
+], style={
+    "display": "flex",
+    "flexDirection": "row",
+    "gap": "20px",        # Espace entre les colonnes
+    "flexWrap": "wrap"    # Permet d'adapter en responsive
+}),
+
+    
+   
     dcc.Link(
         html.Button("Go to Page 2", style={
             "margin": "20px auto",
